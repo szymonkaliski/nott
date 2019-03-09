@@ -30,7 +30,7 @@ trellis = MultiTrellis(
 
 CHUCK_HOST = "127.0.0.1"
 CHUCK_IN_PORT = 9998
-CHUCK_OUT_PORT = 9999
+CHUCK_OUT_PORT = 3000
 
 chuck_in = liblo.Server(CHUCK_IN_PORT)
 chuck_out = liblo.Address(CHUCK_HOST, CHUCK_OUT_PORT)
@@ -53,13 +53,13 @@ class Row(object):
 
     is_recording = False
     is_playing = False
-    index = None
+    id = None
 
     trellis = None
     chuck_out = None
 
-    def __init__(self, index, trellis, chuck_in, chuck_out):
-        self.index = index
+    def __init__(self, id, trellis, chuck_in, chuck_out):
+        self.id = id
         self.trellis = trellis
 
         self.chuck_in = chuck_in  # TODO chuck_in.add_method for self
@@ -68,29 +68,34 @@ class Row(object):
         self.clear()
 
         for x in range(16):
-            self.trellis.activate_key(x, self.index, NeoTrellis.EDGE_RISING)
-            self.trellis.activate_key(x, self.index, NeoTrellis.EDGE_FALLING)
-            self.trellis.set_callback(x, self.index, self.on_click)
+            self.trellis.activate_key(x, self.id, NeoTrellis.EDGE_RISING)
+            self.trellis.activate_key(x, self.id, NeoTrellis.EDGE_FALLING)
+            self.trellis.set_callback(x, self.id, self.on_click)
 
     def clear(self):
         for x in range(16):
             self.set_color(x, COLOR.OFF)
 
     def set_color(self, x, color):
-        self.trellis.color(x, self.index, color)
+        self.trellis.color(x, self.id, color)
 
     def to_chuck(self, path, value):
-        liblo.send(self.chuck_out, path, value)
+        liblo.send(self.chuck_out, path, self.id, value)
 
     def on_click(self, x, _, edge):
-        print(self.index, x, edge)
+        print(self.id, x, edge)
 
         if edge == NeoTrellis.EDGE_RISING and x == 0:
             self.is_recording = not self.is_recording
-            self.to_chuck("/rec", self.is_recording)
+
+            if self.is_recording:
+                self.is_playing = True
+
+            self.to_chuck("/recording", 1 if self.is_recording else 0)
 
         if edge == NeoTrellis.EDGE_RISING and x == 1:
             self.is_playing = not self.is_playing
+            self.to_chuck("/playing", 1 if self.is_playing else 0)
 
     def draw(self):
         if self.mode == MODE.PLAY:
@@ -120,7 +125,7 @@ def signal_handler(signal, frame):
 # handle exit gracefully
 signal.signal(signal.SIGINT, signal_handler)
 
-print("initied!")
+print("Nótt UI Ready")
 
 while True:
     for row in rows:
