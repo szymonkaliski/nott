@@ -29,10 +29,10 @@ trellis = MultiTrellis(
 )
 
 CHUCK_HOST = "127.0.0.1"
-CHUCK_IN_PORT = 9998
+CHUCK_IN_PORT = 3001
 CHUCK_OUT_PORT = 3000
 
-chuck_in = liblo.Server(CHUCK_IN_PORT)
+chuck_in = liblo.ServerThread(CHUCK_IN_PORT)
 chuck_out = liblo.Address(CHUCK_HOST, CHUCK_OUT_PORT)
 
 
@@ -42,6 +42,7 @@ class COLOR(object):
     RED_MUTED = (10, 0, 0)
     GREEN = (0, 200, 0)
     GREEN_MUTED = (0, 10, 0)
+    BLUE_MUTED = (0, 0, 10)
 
 
 class MODE(Enum):
@@ -54,6 +55,7 @@ class Row(object):
     is_recording = False
     is_playing = False
     id = None
+    playback_pos = 0.0
 
     trellis = None
     chuck_out = None
@@ -82,6 +84,10 @@ class Row(object):
     def to_chuck(self, path, value):
         liblo.send(self.chuck_out, path, self.id, value)
 
+    def on_osc_msg(self, path, args):
+        if "status" in path:
+            self.playback_pos = args[0]
+
     def on_click(self, x, _, edge):
         print(self.id, x, edge)
 
@@ -98,27 +104,29 @@ class Row(object):
             self.to_chuck("/playing", 1 if self.is_playing else 0)
 
     def draw(self):
+        playback_pos_idx = round(self.playback_pos * (14 - 2)) + 2
+
         if self.mode == MODE.PLAY:
             self.set_color(0, COLOR.RED if self.is_recording else COLOR.RED_MUTED)
             self.set_color(1, COLOR.GREEN if self.is_playing else COLOR.GREEN_MUTED)
+
+        for i in range(2, 14):
+            self.set_color(i, COLOR.BLUE_MUTED if i == playback_pos_idx else COLOR.OFF)
 
 
 rows = list(map(lambda i: Row(i, trellis, chuck_in, chuck_out), range(8)))
 
 
-def chuck_in_fallback(path, args, types, src):
-    print("unknown message '%s' from '%s'" % (path, src.url))
+for row in rows:
+    chuck_in.add_method("/status/" + str(row.id), "f", row.on_osc_msg)
 
-    for a, t in zip(args, types):
-        print("argument of type '%s': %s" % (t, a))
-
-
-chuck_in.add_method(None, None, chuck_in_fallback)
+chuck_in.start()
 
 
 def signal_handler(signal, frame):
     for row in rows:
         row.clear()
+    chuck_in.stop()
     sys.exit(0)
 
 
@@ -130,8 +138,5 @@ print("Nótt UI Ready")
 while True:
     for row in rows:
         row.draw()
-
     trellis.sync()
-    chuck_in.recv(0)
-
-    time.sleep(0.01)
+    time.sleep(0.1)

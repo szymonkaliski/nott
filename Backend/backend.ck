@@ -1,9 +1,19 @@
+// globals
+
+"localhost" => string HOST;
+3001        => int PORT_OUT;
+3000        => int PORT_IN;
+8           => int LOOPS_COUNT;
+8::second   => dur LOOP_DURATION;
+
+// loops
+
 class Loop {
   LiSa loop;
   Gain loopGain;
 
   fun void init(Gain input) {
-    8::second => loop.duration;
+    LOOP_DURATION => loop.duration;
 
     1 => loop.loop;
     1 => loop.loopRec;
@@ -38,10 +48,34 @@ class Loop {
   fun void feedback(float value) {
     value => loop.feedback;
   }
+
+  fun float position() {
+    return loop.playPos() / LOOP_DURATION;
+  }
 }
 
+// main chucks
+
+Gain inputGain, passThrough;
+
+adc => inputGain;
+adc => passThrough => dac;
+
+1.0 => inputGain.gain;
+1.0 => passThrough.gain;
+
+Loop loop[LOOPS_COUNT];
+
+for (0 => int i; i < LOOPS_COUNT; i++) {
+  loop[i].init(inputGain);
+  loop[i].feedback(1.0);
+  loop[i].volume(1.0);
+}
+
+// osc
+
 class OscListener {
-  function void listenOnOsc(string msg, int port) {
+  fun void listenOnOsc(string msg, int port) {
     OscRecv recv;
     port => recv.port;
 
@@ -57,29 +91,28 @@ class OscListener {
     }
   }
 
-  function void receiveEvent(OscEvent event) {}
+  fun void receiveEvent(OscEvent event) {}
 }
 
-Gain inputGain, passThrough;
+class OscSender {
+  fun void run(string host, int port) {
+    OscOut oscOut;
+    oscOut.dest(host, port);
 
-adc => inputGain;
-8   => int LOOPS_COUNT;
+    while (true) {
+      0.1::second => now;
 
-adc => passThrough => dac;
-
-1.0 => inputGain.gain;
-1.0 => passThrough.gain;
-
-Loop loop[LOOPS_COUNT];
-
-for (0 => int i; i < LOOPS_COUNT; i++) {
-  loop[i].init(inputGain);
-  loop[i].feedback(1.0);
-  loop[i].volume(1.0);
+      for (0 => int i; i < LOOPS_COUNT; i++) {
+        oscOut.start("/status/" + i);
+        loop[i].position() => oscOut.add;
+        oscOut.send();
+      }
+    }
+  }
 }
 
 class ListenRecording extends OscListener {
-  function void receiveEvent(OscEvent event) {
+  fun void receiveEvent(OscEvent event) {
     event.getInt() => int chan;
     event.getInt() => int status;
 
@@ -90,7 +123,7 @@ class ListenRecording extends OscListener {
 }
 
 class ListenPlaying extends OscListener {
-  function void receiveEvent(OscEvent event) {
+  fun void receiveEvent(OscEvent event) {
     event.getInt() => int chan;
     event.getInt() => int status;
 
@@ -101,7 +134,7 @@ class ListenPlaying extends OscListener {
 }
 
 class ListenFeedback extends OscListener {
-  function void receiveEvent(OscEvent event) {
+  fun void receiveEvent(OscEvent event) {
     event.getInt() => int chan;
     event.getFloat() => float value;
 
@@ -112,7 +145,7 @@ class ListenFeedback extends OscListener {
 }
 
 class ListenVolume extends OscListener {
-  function void receiveEvent(OscEvent event) {
+  fun void receiveEvent(OscEvent event) {
     event.getInt() => int chan;
     event.getFloat() => float value;
 
@@ -123,7 +156,7 @@ class ListenVolume extends OscListener {
 }
 
 class ListenClear extends OscListener {
-  function void receiveEvent(OscEvent event) {
+  fun void receiveEvent(OscEvent event) {
     event.getInt() => int chan;
     event.getInt() => int status;
 
@@ -133,17 +166,23 @@ class ListenClear extends OscListener {
   }
 }
 
+// init
+
 ListenRecording listenRecording;
 ListenPlaying listenPlaying;
 ListenFeedback listenFeedback;
 ListenVolume listenVolume;
 ListenClear listenClear;
 
-spork ~ listenRecording.listenOnOsc("/recording, i i", 3000);
-spork ~ listenPlaying.listenOnOsc("/playing, i i", 3000);
-spork ~ listenFeedback.listenOnOsc("/feedback, i f", 3000);
-spork ~ listenVolume.listenOnOsc("/volume, i f", 3000);
-spork ~ listenClear.listenOnOsc("/clear, i i", 3000);
+spork ~ listenRecording.listenOnOsc("/recording, i i", PORT_IN);
+spork ~ listenPlaying.listenOnOsc("/playing, i i", PORT_IN);
+spork ~ listenFeedback.listenOnOsc("/feedback, i f", PORT_IN);
+spork ~ listenVolume.listenOnOsc("/volume, i f", PORT_IN);
+spork ~ listenClear.listenOnOsc("/clear, i i", PORT_IN);
+
+OscSender oscSender;
+
+spork ~ oscSender.run(HOST, PORT_OUT);
 
 <<< "Nótt Backend Ready" >>>;
 
