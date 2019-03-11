@@ -19,6 +19,8 @@ class Loop {
     1 => loop.loopRec;
     1 => loop.maxVoices;
 
+    // -1.0 => loop.rate; // works!
+
     input => loop => loopGain => dac;
   }
 
@@ -49,6 +51,10 @@ class Loop {
     value => loop.feedback;
   }
 
+  fun void jump(float value) {
+    value * LOOP_DURATION => loop.playPos;
+  }
+
   fun float position() {
     return loop.playPos() / LOOP_DURATION;
   }
@@ -75,23 +81,77 @@ for (0 => int i; i < LOOPS_COUNT; i++) {
 // osc
 
 class OscListener {
-  fun void listenOnOsc(string msg, int port) {
-    OscRecv recv;
-    port => recv.port;
+  fun void run(string msg, int port) {
+    OscIn oscIn;
+    OscMsg msg;
+    port => oscIn.port;
 
-    recv.listen();
-    recv.event(msg) @=> OscEvent event;
+    oscIn.listenAll();
 
     while (true) {
-      event => now;
+      oscIn => now;
 
-      while (event.nextMsg()) {
-        receiveEvent(event);
+      while (oscIn.recv(msg)) {
+        if (msg.address.find("/recording") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getInt(1) => int status;
+
+          <<< chan, "record", status >>>;
+
+          loop[chan].record(status);
+        }
+
+        else if (msg.address.find("/play") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getInt(1) => int status;
+
+          <<< chan, "play", status >>>;
+
+          loop[chan].play(status);
+        }
+
+        else if (msg.address.find("/feedback") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getFloat(1) => float value;
+
+          <<< chan, "feedback", value >>>;
+
+          loop[chan].feedback(value);
+        }
+
+        else if (msg.address.find("/volume") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getFloat(1) => float value;
+
+          <<< chan, "volume", value >>>;
+
+          loop[chan].volume(value);
+        }
+
+        else if (msg.address.find("/clear") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getInt(0) => int status;
+
+          <<< chan, "clear", status >>>;
+
+          loop[chan].clear(status);
+        }
+
+        else if (msg.address.find("/jump") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getFloat(1) => float value;
+
+          <<< chan, "jump", value >>>;
+
+          loop[chan].jump(value);
+        }
+
+        else {
+          <<< "unrecognized message: ", msg.address >>>;
+        }
       }
     }
   }
-
-  fun void receiveEvent(OscEvent event) {}
 }
 
 class OscSender {
@@ -111,77 +171,13 @@ class OscSender {
   }
 }
 
-class ListenRecording extends OscListener {
-  fun void receiveEvent(OscEvent event) {
-    event.getInt() => int chan;
-    event.getInt() => int status;
-
-    <<< chan, "record", status >>>;
-
-    loop[chan].record(status);
-  }
-}
-
-class ListenPlaying extends OscListener {
-  fun void receiveEvent(OscEvent event) {
-    event.getInt() => int chan;
-    event.getInt() => int status;
-
-    <<< chan, "play", status >>>;
-
-    loop[chan].play(status);
-  }
-}
-
-class ListenFeedback extends OscListener {
-  fun void receiveEvent(OscEvent event) {
-    event.getInt() => int chan;
-    event.getFloat() => float value;
-
-    <<< chan, "feedback", value >>>;
-
-    loop[chan].feedback(value);
-  }
-}
-
-class ListenVolume extends OscListener {
-  fun void receiveEvent(OscEvent event) {
-    event.getInt() => int chan;
-    event.getFloat() => float value;
-
-    <<< chan, "volume", value >>>;
-
-    loop[chan].volume(value);
-  }
-}
-
-class ListenClear extends OscListener {
-  fun void receiveEvent(OscEvent event) {
-    event.getInt() => int chan;
-    event.getInt() => int status;
-
-    <<< chan, "clear", status >>>;
-
-    loop[chan].clear(status);
-  }
-}
 
 // init
 
-ListenRecording listenRecording;
-ListenPlaying listenPlaying;
-ListenFeedback listenFeedback;
-ListenVolume listenVolume;
-ListenClear listenClear;
-
-spork ~ listenRecording.listenOnOsc("/recording, i i", PORT_IN);
-spork ~ listenPlaying.listenOnOsc("/playing, i i", PORT_IN);
-spork ~ listenFeedback.listenOnOsc("/feedback, i f", PORT_IN);
-spork ~ listenVolume.listenOnOsc("/volume, i f", PORT_IN);
-spork ~ listenClear.listenOnOsc("/clear, i i", PORT_IN);
-
+OscListener oscListener;
 OscSender oscSender;
 
+spork ~ oscListener.run(HOST, PORT_IN);
 spork ~ oscSender.run(HOST, PORT_OUT);
 
 <<< "Nótt Backend Ready" >>>;

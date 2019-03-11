@@ -43,6 +43,7 @@ class COLOR(object):
     GREEN = (0, 200, 0)
     GREEN_MUTED = (0, 10, 0)
     BLUE_MUTED = (0, 0, 10)
+    WHITE_MUTED = (3, 2, 0)
 
 
 class MODE(Enum):
@@ -103,6 +104,9 @@ class Row(object):
             self.is_playing = not self.is_playing
             self.to_chuck("/playing", 1 if self.is_playing else 0)
 
+        if edge == NeoTrellis.EDGE_RISING and 2 <= x < 14:
+            self.to_chuck("/jump", (x - 2) / (14 - 2))
+
     def draw(self):
         playback_pos_idx = round(self.playback_pos * (14 - 2)) + 2
 
@@ -111,7 +115,7 @@ class Row(object):
             self.set_color(1, COLOR.GREEN if self.is_playing else COLOR.GREEN_MUTED)
 
         for i in range(2, 14):
-            self.set_color(i, COLOR.BLUE_MUTED if i == playback_pos_idx else COLOR.OFF)
+            self.set_color(i, COLOR.WHITE_MUTED if i == playback_pos_idx else COLOR.OFF)
 
 
 rows = list(map(lambda i: Row(i, trellis, chuck_in, chuck_out), range(8)))
@@ -139,4 +143,3 @@ while True:
     for row in rows:
         row.draw()
     trellis.sync()
-    time.sleep(0.1)
