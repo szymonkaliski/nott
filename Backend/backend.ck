@@ -4,7 +4,7 @@
 3001        => int PORT_OUT;
 3000        => int PORT_IN;
 8           => int LOOPS_COUNT;
-8::second   => dur LOOP_DURATION;
+6::second   => dur LOOP_DURATION;
 
 // loops
 
@@ -43,16 +43,27 @@ class Loop {
     }
   }
 
-  fun void volume(float value) {
+  fun float volume(float value) {
     value => loopGain.gain;
+    return loopGain.gain();
   }
 
-  fun void feedback(float value) {
+  fun float volume() {
+    return loopGain.gain();
+  }
+
+  fun float feedback(float value) {
     value => loop.feedback;
+    return loop.feedback();
   }
 
-  fun void jump(float value) {
+  fun float feedback() {
+    return loop.feedback();
+  }
+
+  fun float position(float value) {
     value * LOOP_DURATION => loop.playPos;
+    return loop.playPos() / LOOP_DURATION;
   }
 
   fun float position() {
@@ -141,9 +152,9 @@ class OscListener {
           msg.getInt(0) => int chan;
           msg.getFloat(1) => float value;
 
-          <<< chan, "jump", value >>>;
+          <<< chan, "position", value >>>;
 
-          loop[chan].jump(value);
+          loop[chan].position(value);
         }
 
         else {
@@ -165,6 +176,8 @@ class OscSender {
       for (0 => int i; i < LOOPS_COUNT; i++) {
         oscOut.start("/status/" + i);
         loop[i].position() => oscOut.add;
+        loop[i].volume() => oscOut.add;
+        loop[i].feedback() => oscOut.add;
         oscOut.send();
       }
     }

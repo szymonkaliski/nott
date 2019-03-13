@@ -48,6 +48,8 @@ class COLOR(object):
 
 class MODE(Enum):
     PLAY = 1
+    CONTROL_1 = 2
+    CONTROL_2 = 3
 
 
 class Row(object):
@@ -57,6 +59,8 @@ class Row(object):
     is_playing = False
     id = None
     playback_pos = 0.0
+    volume = 1.0
+    feedback = 1.0
 
     trellis = None
     chuck_out = None
@@ -88,10 +92,10 @@ class Row(object):
     def on_osc_msg(self, path, args):
         if "status" in path:
             self.playback_pos = args[0]
+            self.volume = args[1]
+            self.feedback = args[2]
 
     def on_click(self, x, _, edge):
-        print(self.id, x, edge)
-
         if edge == NeoTrellis.EDGE_RISING and x == 0:
             self.is_recording = not self.is_recording
 
@@ -100,29 +104,76 @@ class Row(object):
 
             self.to_chuck("/recording", 1 if self.is_recording else 0)
 
-        if edge == NeoTrellis.EDGE_RISING and x == 1:
-            self.is_playing = not self.is_playing
-            self.to_chuck("/playing", 1 if self.is_playing else 0)
+        if self.mode == MODE.PLAY:
+            if edge == NeoTrellis.EDGE_RISING and x == 1:
+                self.is_playing = not self.is_playing
+                self.to_chuck("/playing", 1 if self.is_playing else 0)
 
-        if edge == NeoTrellis.EDGE_RISING and 2 <= x < 14:
-            self.to_chuck("/jump", (x - 2) / (14 - 2))
+            if edge == NeoTrellis.EDGE_RISING and 2 <= x < 14:
+                self.to_chuck("/jump", (x - 2) / (14 - 2))
+
+        if self.mode == MODE.CONTROL_1:
+            if edge == NeoTrellis.EDGE_RISING and 1 <= x < 8:
+                self.to_chuck("/volume", (x - 1) / (7 - 1))
+
+            if edge == NeoTrellis.EDGE_RISING and 8 <= x < 14:
+                self.to_chuck("/feedback", (x - 8) / (13 - 8))
+
+        if edge == NeoTrellis.EDGE_RISING and x == 15:
+            mode_switches = {
+                MODE.PLAY: MODE.CONTROL_1,
+                MODE.CONTROL_1: MODE.CONTROL_2,
+                MODE.CONTROL_2: MODE.PLAY,
+            }
+
+            print("mode", mode_switches.get(self.mode))
+            self.mode = mode_switches.get(self.mode)
+
+            for i in range(1, 15):
+                self.set_color(i, COLOR.OFF)
 
     def draw(self):
-        playback_pos_idx = round(self.playback_pos * (14 - 2)) + 2
-
         if self.mode == MODE.PLAY:
+            playback_pos_idx = round(self.playback_pos * (14 - 2)) + 2
+
             self.set_color(0, COLOR.RED if self.is_recording else COLOR.RED_MUTED)
             self.set_color(1, COLOR.GREEN if self.is_playing else COLOR.GREEN_MUTED)
 
-        for i in range(2, 14):
-            self.set_color(i, COLOR.WHITE_MUTED if i == playback_pos_idx else COLOR.OFF)
+            for i in range(2, 14):
+                self.set_color(
+                    i, COLOR.WHITE_MUTED if i == playback_pos_idx else COLOR.OFF
+                )
+
+            self.set_color(15, COLOR.OFF)
+
+        if self.mode == MODE.CONTROL_1:
+            self.set_color(15, COLOR.BLUE_MUTED)
+
+            for i in range(1, 8):
+                self.set_color(
+                    i,
+                    COLOR.WHITE_MUTED
+                    if (i - 1) / (7 - 1) <= self.volume
+                    else COLOR.OFF,
+                )
+
+            for i in range(8, 14):
+                self.set_color(
+                    i,
+                    COLOR.WHITE_MUTED
+                    if (i - 8) / (14 - 8) <= self.feedback
+                    else COLOR.OFF,
+                )
+
+        if self.mode == MODE.CONTROL_2:
+            self.set_color(15, COLOR.GREEN_MUTED)
 
 
 rows = list(map(lambda i: Row(i, trellis, chuck_in, chuck_out), range(8)))
 
 
 for row in rows:
-    chuck_in.add_method("/status/" + str(row.id), "f", row.on_osc_msg)
+    chuck_in.add_method("/status/" + str(row.id), "fff", row.on_osc_msg)
 
 chuck_in.start()
 
