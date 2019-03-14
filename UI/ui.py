@@ -35,6 +35,8 @@ CHUCK_OUT_PORT = 3000
 chuck_in = liblo.ServerThread(CHUCK_IN_PORT)
 chuck_out = liblo.Address(CHUCK_HOST, CHUCK_OUT_PORT)
 
+RATES = [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
+
 
 class COLOR(object):
     OFF = (0, 0, 0)
@@ -58,9 +60,12 @@ class Row(object):
     is_recording = False
     is_playing = False
     id = None
+
     playback_pos = 0.0
     volume = 1.0
     feedback = 1.0
+    rate = 1.0
+    direction = 1
 
     trellis = None
     chuck_out = None
@@ -94,6 +99,8 @@ class Row(object):
             self.playback_pos = args[0]
             self.volume = args[1]
             self.feedback = args[2]
+            self.rate = args[3]
+            self.direction = args[4]
 
     def on_click(self, x, _, edge):
         if edge == NeoTrellis.EDGE_RISING and x == 0:
@@ -119,6 +126,13 @@ class Row(object):
             if edge == NeoTrellis.EDGE_RISING and 8 <= x < 14:
                 self.to_chuck("/feedback", (x - 8) / (13 - 8))
 
+        if self.mode == MODE.CONTROL_2:
+            if edge == NeoTrellis.EDGE_RISING and 1 <= x < 8:
+                self.to_chuck("/rate", RATES[x - 1])
+
+            if edge == NeoTrellis.EDGE_RISING and x == 8:
+                self.to_chuck("/direction", 1 if self.direction < 0 else -1)
+
         if edge == NeoTrellis.EDGE_RISING and x == 15:
             mode_switches = {
                 MODE.PLAY: MODE.CONTROL_1,
@@ -126,7 +140,6 @@ class Row(object):
                 MODE.CONTROL_2: MODE.PLAY,
             }
 
-            print("mode", mode_switches.get(self.mode))
             self.mode = mode_switches.get(self.mode)
 
             for i in range(1, 15):
@@ -147,8 +160,6 @@ class Row(object):
             self.set_color(15, COLOR.OFF)
 
         if self.mode == MODE.CONTROL_1:
-            self.set_color(15, COLOR.BLUE_MUTED)
-
             for i in range(1, 8):
                 self.set_color(
                     i,
@@ -165,7 +176,15 @@ class Row(object):
                     else COLOR.OFF,
                 )
 
+            self.set_color(15, COLOR.BLUE_MUTED)
+
         if self.mode == MODE.CONTROL_2:
+            for idx, rate in enumerate(RATES):
+                self.set_color(
+                    idx + 1, COLOR.WHITE_MUTED if rate == self.rate else COLOR.OFF
+                )
+
+            self.set_color(8, COLOR.WHITE_MUTED if self.direction < 0 else COLOR.OFF)
             self.set_color(15, COLOR.GREEN_MUTED)
 
 
@@ -173,7 +192,7 @@ rows = list(map(lambda i: Row(i, trellis, chuck_in, chuck_out), range(8)))
 
 
 for row in rows:
-    chuck_in.add_method("/status/" + str(row.id), "fff", row.on_osc_msg)
+    chuck_in.add_method("/status/" + str(row.id), "ffffi", row.on_osc_msg)
 
 chuck_in.start()
 

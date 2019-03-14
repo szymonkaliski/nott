@@ -11,9 +11,12 @@
 class Loop {
   LiSa loop;
   Gain loopGain;
+  int dir;
 
   fun void init(Gain input) {
     LOOP_DURATION => loop.duration;
+
+    1 => dir;
 
     1 => loop.loop;
     1 => loop.loopRec;
@@ -68,6 +71,25 @@ class Loop {
 
   fun float position() {
     return loop.playPos() / LOOP_DURATION;
+  }
+
+  fun float rate(float value) {
+    value * dir => loop.rate;
+    return value;
+  }
+
+  fun float rate() {
+    return loop.rate();
+  }
+
+  fun int direction(int value) {
+    value => dir;
+    dir * Std.fabs(loop.rate()) => loop.rate;
+    return value;
+  }
+
+  fun int direction() {
+    return dir;
   }
 }
 
@@ -157,6 +179,24 @@ class OscListener {
           loop[chan].position(value);
         }
 
+        else if (msg.address.find("/rate") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getFloat(1) => float value;
+
+          <<< chan, "rate", value >>>;
+
+          loop[chan].rate(value);
+        }
+
+        else if (msg.address.find("/direction") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getInt(1) => int value;
+
+          <<< chan, "direction", value >>>;
+
+          loop[chan].direction(value);
+        }
+
         else {
           <<< "unrecognized message: ", msg.address >>>;
         }
@@ -178,6 +218,8 @@ class OscSender {
         loop[i].position() => oscOut.add;
         loop[i].volume() => oscOut.add;
         loop[i].feedback() => oscOut.add;
+        Std.fabs(loop[i].rate()) => oscOut.add;
+        loop[i].direction() => oscOut.add;
         oscOut.send();
       }
     }
