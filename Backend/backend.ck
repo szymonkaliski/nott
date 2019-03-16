@@ -3,8 +3,8 @@
 "localhost" => string HOST;
 3001        => int PORT_OUT;
 3000        => int PORT_IN;
-8           => int LOOPS_COUNT;
-6::second   => dur LOOP_DURATION;
+6           => int LOOPS_COUNT;
+8::second   => dur LOOP_DURATION;
 
 // loops
 
@@ -215,11 +215,13 @@ class OscSender {
 
       for (0 => int i; i < LOOPS_COUNT; i++) {
         oscOut.start("/status/" + i);
+
         loop[i].position() => oscOut.add;
         loop[i].volume() => oscOut.add;
         loop[i].feedback() => oscOut.add;
         Std.fabs(loop[i].rate()) => oscOut.add;
         loop[i].direction() => oscOut.add;
+
         oscOut.send();
       }
     }
