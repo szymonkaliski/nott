@@ -5,6 +5,7 @@
 3000        => int PORT_IN;
 6           => int LOOPS_COUNT;
 8::second   => dur LOOP_DURATION;
+0.01        => float EPS;
 
 // loops
 
@@ -12,6 +13,9 @@ class Loop {
   LiSa loop;
   Gain loopGain;
   int dir;
+
+  int isPlaying;
+  int isRecording;
 
   fun void init(Gain input) {
     LOOP_DURATION => loop.duration;
@@ -27,17 +31,31 @@ class Loop {
     input => loop => loopGain => dac;
   }
 
-  fun void play(int status) {
+  fun int play(int status) {
     status => loop.play;
+    status => isPlaying;
+
+    return isPlaying;
   }
 
-  fun void record(int status) {
+  fun int play() {
+    return isPlaying;
+  }
+
+  fun int record(int status) {
     if (status) {
       loop.playPos() => loop.recPos;
       status => loop.play;
     }
 
     status => loop.record;
+    status => isRecording;
+
+    return isRecording;
+  }
+
+  fun int record() {
+    return isRecording;
   }
 
   fun void clear(int status) {
@@ -90,6 +108,26 @@ class Loop {
 
   fun int direction() {
     return dir;
+  }
+
+  fun void subloop(float a, float b) {
+    a * LOOP_DURATION => loop.loopStart;
+    b * LOOP_DURATION => loop.loopEnd;
+  }
+
+  fun float loopStart() {
+    return loop.loopStart() / LOOP_DURATION;
+  }
+
+  fun float loopEnd() {
+    loop.loopEnd() / LOOP_DURATION => float end;
+
+    if (end > (1.0 - EPS)) {
+      return 1.0;
+    }
+
+
+    return end;
   }
 }
 
@@ -197,6 +235,16 @@ class OscListener {
           loop[chan].direction(value);
         }
 
+        else if (msg.address.find("/subloop") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getFloat(1) => float a;
+          msg.getFloat(2) => float b;
+
+          <<< chan, "subloop", a, b >>>;
+
+          loop[chan].subloop(a, b);
+        }
+
         else {
           <<< "unrecognized message: ", msg.address >>>;
         }
@@ -211,16 +259,20 @@ class OscSender {
     oscOut.dest(host, port);
 
     while (true) {
-      0.1::second => now;
+      0.01::second => now;
 
       for (0 => int i; i < LOOPS_COUNT; i++) {
         oscOut.start("/status/" + i);
 
+        loop[i].play() => oscOut.add;
+        loop[i].record() => oscOut.add;
         loop[i].position() => oscOut.add;
         loop[i].volume() => oscOut.add;
         loop[i].feedback() => oscOut.add;
         Std.fabs(loop[i].rate()) => oscOut.add;
         loop[i].direction() => oscOut.add;
+        loop[i].loopStart() => oscOut.add;
+        loop[i].loopEnd() => oscOut.add;
 
         oscOut.send();
       }
