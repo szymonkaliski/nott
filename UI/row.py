@@ -1,4 +1,3 @@
-import liblo
 from adafruit_neotrellis.neotrellis import NeoTrellis
 
 from consts import COLOR, MODE, RATES
@@ -30,13 +29,13 @@ class Row(object):
     direction = 1
     subloop = (0.0, 1.0)
 
-    def __init__(self, id, rowIdx, trellis, chuck_in, chuck_out):
+    def __init__(self, id, rowIdx, trellis, chuck_in, chuck_send_out):
         self.id = id
         self.rowIdx = rowIdx
         self.trellis = trellis
 
         self.chuck_in = chuck_in
-        self.chuck_out = chuck_out
+        self.chuck_send_out = chuck_send_out
 
         self.clear()
 
@@ -53,7 +52,7 @@ class Row(object):
         self.trellis.color(x, self.rowIdx, color)
 
     def to_chuck(self, path, *values):
-        liblo.send(self.chuck_out, path, self.id, *values)
+        self.chuck_send_out(path, self.id, *values)
 
     def on_osc_msg(self, path, args):
         if "status" in path:

@@ -13,6 +13,7 @@ from threading import Thread
 from consts import CHUCK_IN_PORT, CHUCK_OUT_PORT, CHUCK_HOST, LOOPS_COUNT
 from row import Row
 from topbar import Topbar
+from patterns import Patterns
 
 # setup trellis
 i2c_bus = busio.I2C(SCL, SDA)
@@ -40,12 +41,17 @@ chuck_out = liblo.Address(CHUCK_HOST, CHUCK_OUT_PORT)
 # setup ui
 rows = []
 
+patterns = Patterns(
+    lambda path, loopId, *values: liblo.send(chuck_out, path, loopId, *values)
+)
+
+
 for i in range(LOOPS_COUNT):
-    row = Row(i, i + 1, trellis, chuck_in, chuck_out)
+    row = Row(i, i + 1, trellis, chuck_in, patterns.on_msg)
     rows.append(row)
     chuck_in.add_method("/status/" + str(row.id), "iiffffiff", row.on_osc_msg)
 
-topbar = Topbar(rows, trellis)
+topbar = Topbar(rows, patterns, trellis)
 
 # start receiving info from chuck
 chuck_in.start()
