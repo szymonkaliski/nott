@@ -68,10 +68,14 @@ class Row(object):
     def on_click(self, x, _, edge):
         if self.mode == MODE.PLAY:
             if edge == EDGE_RISING and 0 <= x < 16:
+                is_sublooping = self.subloop[0] > 0.0 or self.subloop[1] < 1.0
+
                 if self.held_index < 0:
                     self.held_index = x
-                    self.to_chuck("/subloop", 0.0, 1.0)
                     self.to_chuck("/jump", x / 16)
+
+                    if is_sublooping:
+                        self.to_chuck("/subloop", 0.0, 1.0)
                 else:
                     a, b = self.held_index / 16, x / 16
                     self.held_index = -1

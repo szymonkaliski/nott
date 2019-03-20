@@ -60,11 +60,19 @@ chuck_in.start()
 interrupt = digitalio.DigitalInOut(D5)
 interrupt.direction = digitalio.Direction.INPUT
 
-# main thread
+# main
 
 
 class Main(object):
     is_running = True
+    thread = None
+
+    def __init__(self):
+        self.thread = Thread(target=self.run)
+        self.thread.setDaemon(True)
+
+    def start(self):
+        self.thread.start()
 
     def stop(self):
         self.is_running = False
@@ -72,21 +80,21 @@ class Main(object):
     def run(self):
         print("Nótt UI Ready")
 
-        while self.is_running:
-            topbar.draw()
+        while True:
+            if self.is_running:
+                topbar.draw()
 
-            for row in rows:
-                row.draw()
+                for row in rows:
+                    row.draw()
 
-            if interrupt.value is False:
-                trellis.sync()
+                if interrupt.value is False:
+                    trellis.sync()
+            else:
+                time.sleep(0.01)
 
 
 main = Main()
-
-mainThread = Thread(target=main.run)
-mainThread.setDaemon(True)
-mainThread.start()
+main.start()
 
 # clean exit
 
@@ -96,6 +104,8 @@ def signal_handler(signal, frame):
 
     main.stop()
     chuck_in.stop()
+    patterns.stop()
+
     topbar.clear()
 
     for row in rows:
