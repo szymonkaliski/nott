@@ -19,3 +19,8 @@ class MODE(Enum):
     PLAY = 1
     CONTROL_1 = 2
     CONTROL_2 = 3
+
+
+class PLAYBACK_MODES(object):
+    STANDARD = "MODE_STANDARD"
+    GRANULAR = "MODE_GRANULAR"

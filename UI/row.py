@@ -1,6 +1,6 @@
 from adafruit_neotrellis.neotrellis import NeoTrellis
 
-from consts import COLOR, MODE, RATES
+from consts import COLOR, MODE, PLAYBACK_MODES, RATES
 
 EDGE_RISING = NeoTrellis.EDGE_RISING
 EDGE_FALLING = NeoTrellis.EDGE_FALLING
@@ -20,6 +20,7 @@ class Row(object):
     held_index = -1
 
     # from chuck
+    playback_mode = None
     is_recording = False
     is_playing = False
     playback_pos = 0.0
@@ -56,14 +57,15 @@ class Row(object):
 
     def on_osc_msg(self, path, args):
         if "status" in path:
-            self.is_playing = args[0]
-            self.is_recording = args[1]
-            self.playback_pos = args[2]
-            self.volume = args[3]
-            self.feedback = args[4]
-            self.rate = args[5]
-            self.direction = args[6]
-            self.subloop = (args[7], args[8])
+            self.playback_mode = args[0]
+            self.is_playing = args[1]
+            self.is_recording = args[2]
+            self.playback_pos = args[3]
+            self.volume = args[4]
+            self.feedback = args[5]
+            self.rate = args[6]
+            self.direction = args[7]
+            self.subloop = (args[8], args[9])
 
     def on_click(self, x, _, edge):
         if self.mode == MODE.PLAY:
@@ -93,6 +95,12 @@ class Row(object):
 
             if x == 8:
                 self.to_chuck("/direction", 1 if self.direction < 0 else -1)
+
+            if x == 10:
+                self.to_chuck("/mode", PLAYBACK_MODES.STANDARD)
+
+            if x == 11:
+                self.to_chuck("/mode", PLAYBACK_MODES.GRANULAR)
 
             if x == 15:
                 self.to_chuck("/play", 0 if self.is_playing else 1)
@@ -135,8 +143,23 @@ class Row(object):
                     )
 
             self.set_color(8, COLOR.WHITE if self.direction < 0 else COLOR.WHITE_MUTED)
+            self.set_color(9, COLOR.OFF)
 
-            for i in range(9, 15):
+            self.set_color(
+                10,
+                COLOR.WHITE
+                if self.playback_mode == PLAYBACK_MODES.STANDARD
+                else COLOR.OFF,
+            )
+
+            self.set_color(
+                11,
+                COLOR.WHITE
+                if self.playback_mode == PLAYBACK_MODES.GRANULAR
+                else COLOR.OFF,
+            )
+
+            for i in range(12, 15):
                 self.set_color(i, COLOR.OFF)
 
             self.set_color(15, COLOR.WHITE if self.is_playing else COLOR.WHITE_MUTED)

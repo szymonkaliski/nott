@@ -5,7 +5,15 @@
 3000        => int PORT_IN;
 6           => int LOOPS_COUNT;
 8::second   => dur LOOP_DURATION;
+// 4::second   => dur LOOP_DURATION;
 0.01        => float EPS;
+
+"MODE_STANDARD" => string MODE_STANDARD;
+"MODE_GRANULAR" => string MODE_GRANULAR;
+
+fun float clamp(float v, float a, float b) {
+  return Math.min(b, Math.max(v, a));
+}
 
 // loops
 
@@ -17,18 +25,61 @@ class Loop {
   int isPlaying;
   int isRecording;
 
+  string currentMode;
+
   fun void init(Gain input) {
     LOOP_DURATION => loop.duration;
 
     1 => dir;
+    MODE_STANDARD => mode;
 
     1 => loop.loop;
     1 => loop.loopRec;
-    1 => loop.maxVoices;
-
-    // -1.0 => loop.rate; // works!
+    8 => loop.maxVoices;
 
     input => loop => loopGain => dac;
+
+    spork ~ run();
+  }
+
+  fun void run() {
+    while (true) {
+      if (currentMode == MODE_STANDARD) {
+        // nothing
+      }
+
+      if (currentMode == MODE_GRANULAR) {
+        spork ~ grain();
+      }
+
+      1::ms => now;
+    }
+  }
+
+  fun void grain() {
+    // voice 0 plays through file normally, pointing to where we are
+
+    loop.getVoice() => int newVoice;
+    loop.playPos() / LOOP_DURATION => float pos;
+
+    // TODO: parametrize this with UI
+    0.05 => float randomSpan;
+    10::ms => dur grainLen;
+
+    if (newVoice >= 1 && isPlaying == 1) {
+      clamp(pos + Std.rand2f(-randomSpan, randomSpan), 0.0, 1.0) => float randomPos;
+      (grainLen / 4.0) => dur rampTime;
+
+      loop.voiceGain(newVoice, 1.0);
+      loop.playPos(newVoice, randomPos * LOOP_DURATION);
+      loop.rampUp(newVoice, rampTime);
+
+      (grainLen - rampTime * 2.0) => now;
+
+      loop.rampDown(newVoice, rampTime);
+
+      rampTime => now;
+    }
   }
 
   fun int play(int status) {
@@ -43,9 +94,9 @@ class Loop {
   }
 
   fun int record(int status) {
-    if (status) {
+    if (status == 1) {
       loop.playPos() => loop.recPos;
-      status => loop.play;
+      play(1);
     }
 
     status => loop.record;
@@ -111,8 +162,12 @@ class Loop {
   }
 
   fun void subloop(float a, float b) {
+    // loop playback
     a * LOOP_DURATION => loop.loopStart;
     b * LOOP_DURATION => loop.loopEnd;
+
+    // loop recording, loop record start position is handled by loopStart
+    b * LOOP_DURATION => loop.loopEndRec;
   }
 
   fun float loopStart() {
@@ -126,8 +181,26 @@ class Loop {
       return 1.0;
     }
 
-
     return end;
+  }
+
+  fun string mode(string newMode) {
+    if (newMode != currentMode) {
+      if (newMode == MODE_GRANULAR) {
+        loop.voiceGain(0, 0.0);
+      }
+
+      if (newMode == MODE_STANDARD) {
+        loop.voiceGain(0, 1.0);
+      }
+    }
+
+    newMode => currentMode;
+    return currentMode;
+  }
+
+  fun string mode() {
+    return currentMode;
   }
 }
 
@@ -245,6 +318,15 @@ class OscListener {
           loop[chan].subloop(a, b);
         }
 
+        else if (msg.address.find("/mode") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getString(1) => string newMode;
+
+          <<< chan, "playback mode", newMode >>>;
+
+          loop[chan].mode(newMode);
+        }
+
         else {
           <<< "unrecognized message: ", msg.address >>>;
         }
@@ -264,6 +346,7 @@ class OscSender {
       for (0 => int i; i < LOOPS_COUNT; i++) {
         oscOut.start("/status/" + i);
 
+        loop[i].mode() => oscOut.add;
         loop[i].play() => oscOut.add;
         loop[i].record() => oscOut.add;
         loop[i].position() => oscOut.add;
