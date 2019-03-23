@@ -38,6 +38,7 @@ class Patterns(object):
 
     def clear_recording(self, idx):
         self.is_recording = False
+        self.is_replaying = False
         del self.records[idx]
 
     def stop_replaying(self):
