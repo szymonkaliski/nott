@@ -4,7 +4,7 @@ from adafruit_neotrellis.neotrellis import NeoTrellis
 EDGE_RISING = NeoTrellis.EDGE_RISING
 EDGE_FALLING = NeoTrellis.EDGE_FALLING
 
-MODES = {0: MODE.PLAY, 1: MODE.CONTROL_1, 2: MODE.CONTROL_2}
+MODES = {0: MODE.PLAY, 1: MODE.CONTROL_1, 2: MODE.CONTROL_2, 3: MODE.CONTROL_3}
 
 
 class Topbar(object):
@@ -26,13 +26,13 @@ class Topbar(object):
             self.trellis.set_callback(x, 0, self.on_click)
 
     def on_click(self, x, _, edge):
-        if 0 <= x < 3 and MODES[x] != self.mode and edge == EDGE_RISING:
+        if 0 <= x < 4 and MODES[x] != self.mode and edge == EDGE_RISING:
             self.mode = MODES[x]
 
             for row in self.rows:
                 row.mode = self.mode
 
-        if 4 <= x < 8 and edge == EDGE_RISING:
+        if 8 <= x < 12 and edge == EDGE_RISING:
             if self.is_alt_held:
                 self.patterns.clear_recording(x - 4)
             else:
@@ -45,12 +45,12 @@ class Topbar(object):
         self.trellis.color(x, 0, color)
 
     def draw(self):
-        for x in range(3):
+        for x in range(4):
             self.set_color(
                 x, COLOR.WHITE if self.mode == MODES[x] else COLOR.WHITE_MUTED
             )
 
-        for x in range(4, 8):
+        for x in range(8, 12):
             if self.patterns.is_recording or self.patterns.is_replaying:
                 self.set_color(
                     x,

@@ -50,6 +50,7 @@ for i in range(LOOPS_COUNT):
     row = Row(i, i + 1, trellis, chuck_in, patterns.on_msg)
     rows.append(row)
     chuck_in.add_method("/status/" + str(row.id), "siiffffiff", row.on_osc_msg)
+    chuck_in.add_method("/status_granular/" + str(row.id), "ffiii", row.on_osc_msg)
 
 topbar = Topbar(rows, patterns, trellis)
 

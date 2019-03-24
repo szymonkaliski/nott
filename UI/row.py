@@ -5,6 +5,10 @@ from consts import COLOR, MODE, PLAYBACK_MODES, RATES
 EDGE_RISING = NeoTrellis.EDGE_RISING
 EDGE_FALLING = NeoTrellis.EDGE_FALLING
 
+GRANULAR_SPANS = [1.0 / 128.0, 1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0]
+GRANULAR_LENGTHS = [1.0 / 128.0, 1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0]
+GRANULAR_VOICES = [2, 4, 8, 16]
+
 
 class Row(object):
     # the world
@@ -23,12 +27,21 @@ class Row(object):
     playback_mode = None
     is_recording = False
     is_playing = False
-    playback_pos = 0.0
+
     volume = 1.0
     feedback = 1.0
+
+    playback_pos = 0.0
+    subloop = (0.0, 1.0)
+
     rate = 1.0
     direction = 1
-    subloop = (0.0, 1.0)
+
+    granular_span = 0
+    granular_length = 0
+    granular_voices = 0
+    granular_direction = 0
+    granular_repitch = 0
 
     def __init__(self, id, rowIdx, trellis, chuck_in, chuck_send_out):
         self.id = id
@@ -56,7 +69,7 @@ class Row(object):
         self.chuck_send_out(path, self.id, *values)
 
     def on_osc_msg(self, path, args):
-        if "status" in path:
+        if "/status/" in path:
             self.playback_mode = args[0]
             self.is_playing = args[1]
             self.is_recording = args[2]
@@ -66,6 +79,13 @@ class Row(object):
             self.rate = args[6]
             self.direction = args[7]
             self.subloop = (args[8], args[9])
+
+        if "/status_granular/" in path:
+            self.granular_span = args[0]
+            self.granular_length = args[1]
+            self.granular_voices = args[2]
+            self.granular_direction = args[3]  # 1 fwd, 2 bkwd, 3 rand
+            self.granular_repitch = args[4]  # 1 on, 0 off
 
     def on_click(self, x, _, edge):
         if self.mode == MODE.PLAY:
@@ -112,6 +132,30 @@ class Row(object):
             if 8 <= x <= 16:
                 self.to_chuck("/feedback", (x - 8) / 7)
 
+        if self.mode == MODE.CONTROL_3 and edge == EDGE_RISING:
+            if 0 <= x <= 3:
+                self.to_chuck("/granular_span", GRANULAR_SPANS[x])
+
+            if 4 <= x <= 7:
+                self.to_chuck("/granular_length", GRANULAR_LENGTHS[x - 4])
+
+            if 8 <= x <= 11:
+                self.to_chuck("/granular_voices", GRANULAR_VOICES[x - 8])
+
+            if x == 12:
+                self.to_chuck("/granular_direction", 1)
+
+            if x == 13:
+                self.to_chuck("/granular_direction", 2)
+
+            if x == 14:
+                self.to_chuck("/granular_direction", 3)
+
+            if x == 15:
+                self.to_chuck(
+                    "/granular_repitch", 0 if self.granular_repitch == 1 else 1
+                )
+
     def draw(self):
         if self.mode == MODE.PLAY:
             playback_pos_idx = round(self.playback_pos * 16)
@@ -149,14 +193,14 @@ class Row(object):
                 10,
                 COLOR.WHITE
                 if self.playback_mode == PLAYBACK_MODES.STANDARD
-                else COLOR.OFF,
+                else COLOR.WHITE_MUTED,
             )
 
             self.set_color(
                 11,
                 COLOR.WHITE
                 if self.playback_mode == PLAYBACK_MODES.GRANULAR
-                else COLOR.OFF,
+                else COLOR.WHITE_MUTED,
             )
 
             for i in range(12, 15):
@@ -174,3 +218,46 @@ class Row(object):
                 self.set_color(
                     i, COLOR.WHITE_MUTED if (i - 8) / 8 <= self.feedback else COLOR.OFF
                 )
+
+        if self.mode == MODE.CONTROL_3:
+            if self.playback_mode == PLAYBACK_MODES.GRANULAR:
+                for i in range(0, 4):
+                    self.set_color(
+                        i,
+                        COLOR.WHITE_MUTED
+                        if GRANULAR_SPANS[i] == self.granular_span
+                        else COLOR.OFF,
+                    )
+
+                for i in range(4, 8):
+                    self.set_color(
+                        i,
+                        COLOR.WHITE_MUTED
+                        if GRANULAR_LENGTHS[i - 4] == self.granular_length
+                        else COLOR.OFF,
+                    )
+
+                for i in range(8, 12):
+                    self.set_color(
+                        i,
+                        COLOR.WHITE_MUTED
+                        if GRANULAR_VOICES[i - 8] == self.granular_voices
+                        else COLOR.OFF,
+                    )
+
+                self.set_color(
+                    12, COLOR.WHITE_MUTED if self.granular_direction == 1 else COLOR.OFF
+                )
+                self.set_color(
+                    13, COLOR.WHITE_MUTED if self.granular_direction == 2 else COLOR.OFF
+                )
+                self.set_color(
+                    14, COLOR.WHITE_MUTED if self.granular_direction == 3 else COLOR.OFF
+                )
+                self.set_color(
+                    15, COLOR.WHITE_MUTED if self.granular_repitch == 1 else COLOR.OFF
+                )
+
+            else:
+                for i in range(0, 16):
+                    self.set_color(i, COLOR.OFF)

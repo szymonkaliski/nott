@@ -19,6 +19,7 @@ class MODE(Enum):
     PLAY = 1
     CONTROL_1 = 2
     CONTROL_2 = 3
+    CONTROL_3 = 4
 
 
 class PLAYBACK_MODES(object):

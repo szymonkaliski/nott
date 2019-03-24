@@ -27,6 +27,12 @@ class Loop {
 
   string currentMode;
 
+  float granularSpan;
+  float granularLength;
+  int granularVoices;
+  int granularDirection; // 1 fwd, 2 bkwd, 3 rand
+  int granularRepitch; // 1 on, 0 off
+
   fun void init(Gain input) {
     LOOP_DURATION => loop.duration;
 
@@ -35,7 +41,13 @@ class Loop {
 
     1 => loop.loop;
     1 => loop.loopRec;
-    8 => loop.maxVoices;
+    16 => loop.maxVoices;
+
+    1.0 / 64.0 => granularSpan;
+    1.0 / 64.0 => granularLength;
+    4 => granularVoices;
+    3 => granularDirection;
+    0 => granularRepitch;
 
     input => loop => loopGain => dac;
 
@@ -62,19 +74,34 @@ class Loop {
     loop.getVoice() => int newVoice;
     loop.playPos() / LOOP_DURATION => float pos;
 
-    // TODO: parametrize this with UI
-    0.05 => float randomSpan;
-    10::ms => dur grainLen;
+    LOOP_DURATION * granularLength => dur grainLength;
+    (grainLength / 4.0) => dur rampTime;
 
-    if (newVoice >= 1 && isPlaying == 1) {
-      clamp(pos + Std.rand2f(-randomSpan, randomSpan), 0.0, 1.0) => float randomPos;
-      (grainLen / 4.0) => dur rampTime;
+    1 => int grainDir;
 
-      loop.voiceGain(newVoice, 1.0);
+    if (granularDirection == 2) {
+      -1 => grainDir;
+    }
+
+    if (granularDirection == 3) {
+      Std.rand2f(0.0, 1.0) >= 0.5 ? 1 : -1 => grainDir;
+    }
+
+    1.0 => float grainRate;
+
+    if (granularRepitch == 1) {
+      Std.fabs(loop.rate()) => grainRate;
+    }
+
+    if (newVoice >= 1 && newVoice - 1 <= granularVoices && isPlaying == 1) {
+      clamp(pos + Std.rand2f(-granularSpan, granularSpan), 0.0, 1.0) => float randomPos;
+
+      loop.rate(newVoice, grainDir * grainRate);
+      loop.voiceGain(newVoice, 1.0 - 1.0 / (18.0 - granularVoices));
       loop.playPos(newVoice, randomPos * LOOP_DURATION);
       loop.rampUp(newVoice, rampTime);
 
-      (grainLen - rampTime * 2.0) => now;
+      (grainLength - rampTime * 2.0) => now;
 
       loop.rampDown(newVoice, rampTime);
 
@@ -327,6 +354,51 @@ class OscListener {
           loop[chan].mode(newMode);
         }
 
+        else if (msg.address.find("/granular_span") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getFloat(1) => float granularSpan;
+
+          <<< chan, "granular span", granularSpan >>>;
+
+          granularSpan => loop[chan].granularSpan;
+        }
+
+        else if (msg.address.find("/granular_length") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getFloat(1) => float granularLength;
+
+          <<< chan, "granular length", granularLength >>>;
+
+          granularLength => loop[chan].granularLength;
+        }
+
+        else if (msg.address.find("/granular_voices") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getInt(1) => int granularVoices;
+
+          <<< chan, "granular voices", granularVoices >>>;
+
+          granularVoices => loop[chan].granularVoices;
+        }
+
+        else if (msg.address.find("/granular_direction") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getInt(1) => int granularDirection;
+
+          <<< chan, "granular direction", granularDirection >>>;
+
+          granularDirection => loop[chan].granularDirection;
+        }
+
+        else if (msg.address.find("/granular_repitch") == 0) {
+          msg.getInt(0) => int chan;
+          msg.getInt(1) => int granularRepitch;
+
+          <<< chan, "granular repitch", granularRepitch >>>;
+
+          granularRepitch => loop[chan].granularRepitch;
+        }
+
         else {
           <<< "unrecognized message: ", msg.address >>>;
         }
@@ -358,6 +430,18 @@ class OscSender {
         loop[i].loopEnd() => oscOut.add;
 
         oscOut.send();
+
+        if (loop[i].mode() == MODE_GRANULAR) {
+          oscOut.start("/status_granular/" + i);
+
+          loop[i].granularSpan => oscOut.add;
+          loop[i].granularLength => oscOut.add;
+          loop[i].granularVoices => oscOut.add;
+          loop[i].granularDirection => oscOut.add;
+          loop[i].granularRepitch => oscOut.add;
+
+          oscOut.send();
+        }
       }
     }
   }
