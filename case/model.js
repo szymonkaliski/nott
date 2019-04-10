@@ -8,9 +8,9 @@ const {
 
 const range = n => Array.from({ length: n }).map((_, i) => i);
 
-const RENDER_HOLES = process.env.RENDER_HOLES
-  ? process.env.RENDER_HOLES === "true"
-  : true;
+const USE_ENV = process.env.RENDER_TOP || process.env.RENDER_BOTTOM;
+const RENDER_TOP = USE_ENV ? process.env.RENDER_TOP === "true" : true;
+const RENDER_BOTTOM = USE_ENV ? process.env.RENDER_BOTTOM === "true" : false;
 
 // in CM
 const MONOME_SIZE = [24, 12];
@@ -39,12 +39,12 @@ const Dial = ({ yOffset }) => {
 };
 
 module.exports = () => (
-  <Model>
+  <Model showParts={false}>
     <Subtract>
       <TopPlate />
 
       {/* buttons */}
-      {RENDER_HOLES &&
+      {RENDER_TOP &&
         range(16).map(i =>
           range(8).map(j => {
             const size = 1;
@@ -67,7 +67,7 @@ module.exports = () => (
         )}
 
       {/* monome screws */}
-      {RENDER_HOLES &&
+      {RENDER_TOP &&
         range(8).map(i =>
           range(4).map(j => {
             const r = 0.2;
@@ -81,22 +81,56 @@ module.exports = () => (
         )}
 
       {/* dials */}
-      {RENDER_HOLES && [1.7, 3.7].map(offset => <Dial yOffset={offset} />)}
+      {RENDER_TOP && [1.7, 3.7].map(offset => <Dial yOffset={offset} />)}
+
+      {/* pisound screwes */}
+      {RENDER_TOP &&
+        [[-1.8, 0.4], [-1.8, 5.2], [-7.6, 0.4], [-7.6, 5.2]].map(([ox, oy]) => {
+          const r = 0.4;
+
+          const x = MONOME_SIZE[0] / 2 + ox;
+          const y = -(MONOME_SIZE[1] + TOP_SIZE[1]) / 2 + oy;
+
+          return <Cylinder radius={r / 2} start={[x, 0, y]} end={[x, 1, y]} />;
+        })}
+
+      {/* rpi screwes under pisound */}
+      {(RENDER_TOP || RENDER_BOTTOM) &&
+        [[-1.8, 0.4], [-1.8, 5.2], [-7.6, 0.4], [-7.6, 5.2]].map(([ox, oy]) => {
+          const r = 0.4;
+
+          const x = MONOME_SIZE[0] / 2 + ox;
+          const y = -(MONOME_SIZE[1] + TOP_SIZE[1]) / 2 + oy;
+
+          return <Cylinder radius={r / 2} start={[x, 0, y]} end={[x, 1, y]} />;
+        })}
+
+      {/* rpi screwes next to pisound */}
+      {RENDER_BOTTOM &&
+        [[2.3, 0.4], [2.3, 5.2], [8.1, 0.4], [8.1, 5.2]].map(([ox, oy]) => {
+          const r = 0.4;
+
+          const x = -MONOME_SIZE[0] / 2 + ox;
+          const y = -(MONOME_SIZE[1] + TOP_SIZE[1]) / 2 + oy;
+
+          return <Cylinder radius={r / 2} start={[x, 0, y]} end={[x, 1, y]} />;
+        })}
 
       {/* plate screws */}
-      {[
-        [-0.25, -0.25],
-        [-0.25, MONOME_SIZE[1] + TOP_SIZE[1] + 0.25],
-        [MONOME_SIZE[0] + 0.25, -0.25],
-        [MONOME_SIZE[0] + 0.25, MONOME_SIZE[1] + TOP_SIZE[1] + 0.25]
-      ].map(([ox, oy]) => {
-        const r = 0.2;
+      {(RENDER_TOP || RENDER_BOTTOM) &&
+        [
+          [-0.25, -0.25],
+          [-0.25, MONOME_SIZE[1] + TOP_SIZE[1] + 0.25],
+          [MONOME_SIZE[0] + 0.25, -0.25],
+          [MONOME_SIZE[0] + 0.25, MONOME_SIZE[1] + TOP_SIZE[1] + 0.25]
+        ].map(([ox, oy]) => {
+          const r = 0.2;
 
-        const x = -MONOME_SIZE[0] / 2 + ox;
-        const y = -(MONOME_SIZE[1] + TOP_SIZE[1]) / 2 + oy;
+          const x = -MONOME_SIZE[0] / 2 + ox;
+          const y = -(MONOME_SIZE[1] + TOP_SIZE[1]) / 2 + oy;
 
-        return <Cylinder radius={r / 2} start={[x, 0, y]} end={[x, 1, y]} />;
-      })}
+          return <Cylinder radius={r / 2} start={[x, 0, y]} end={[x, 1, y]} />;
+        })}
     </Subtract>
   </Model>
 );
