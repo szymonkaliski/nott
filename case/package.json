@@ -14,6 +14,6 @@
     "preview": "modeler preview -m ./model.js -p 3000",
     "export:top": "mkdir dist; RENDER_TOP=true modeler export -m ./model.js -o dist/case-top.stl",
     "export:bottom": "mkdir dist; RENDER_BOTTOM=true modeler export -m ./model.js -o dist/case-bottom.stl",
-    "export": "npm run export:top; npm run export:bottom"
+    "export": "npm run export:top; npm run export:bottom; ./scripts/slice-to-svg.sh"
   }
 }
