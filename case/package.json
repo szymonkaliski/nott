@@ -7,8 +7,8 @@
   "author": "Szymon Kaliski <hi@szymonkaliski.com> (http://szymonkaliski.com)",
   "license": "MIT",
   "dependencies": {
-    "modeler-csg": "^1.0.1-alpha.3",
-    "modeler-cli": "^1.0.1-alpha.3"
+    "modeler-csg": "^1.1.0",
+    "modeler-cli": "^1.1.0"
   },
   "scripts": {
     "preview": "modeler preview -m ./model.js -p 3000",
