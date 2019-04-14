@@ -1,0 +1,12 @@
+[Unit]
+Description=Nótt Backend
+After=multi-user.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/app/
+Type=idle
+ExecStart=/home/pi/.bin/chuck --adc3 --dac3 /home/pi/app/backend/backend.ck
+
+[Install]
+WantedBy=multi-user.target

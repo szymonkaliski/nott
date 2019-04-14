@@ -1,0 +1,12 @@
+[Unit]
+Description=Nótt UI
+After=multi-user.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/app/
+Type=idle
+ExecStart=/usr/bin/python3 /home/pi/app/ui/ui.py
+
+[Install]
+WantedBy=multi-user.target
