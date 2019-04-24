@@ -62,8 +62,9 @@
   cp chuck ~/.bin/chuck
   ```
 
-7. `./scripts/systemd-setup.sh`
-8. `./scripts/systemd-start.sh`
+7. `git clone git@github.com:szymonkaliski/nott.git ~/app && cd ~/app`
+8. `./scripts/systemd-setup.sh`
+9. `./scripts/systemd-start.sh`
 
 ## Case
 
