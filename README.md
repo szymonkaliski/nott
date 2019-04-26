@@ -1,6 +1,10 @@
 # nótt
 ## standalone [mlr](https://monome.org/docs/norns/dust/tehn/mlr/) & [norns](https://monome.org/norns/) inspired (granular) audio looper
 
+## Usage
+
+[Click here for detailed info.](./docs/USAGE.md)
+
 ## Hardware
 
 - 1x Raspberry Pi 3B+
