@@ -1,5 +1,5 @@
 # nótt
-## standalone [mlr](https://monome.org/docs/norns/dust/tehn/mlr/) & [norns](https://monome.org/norns/) inspired (granular) audio looper
+## standalone [mlr](https://monome.org/docs/norns/dust/tehn/mlr/) & [norns](https://monome.org/norns/) inspired sampler, looper and granular instrument
 
 ## Usage
 
