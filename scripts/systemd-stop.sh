@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-sudo systemctl start nott-ui.service
-sudo systemctl start nott-backend.service
+sudo systemctl stop nott-ui.service
+sudo systemctl stop nott-backend.service

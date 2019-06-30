@@ -41,6 +41,9 @@ class Topbar(object):
         if x == 15:
             self.is_alt_held = edge == EDGE_RISING
 
+            for row in self.rows:
+                row.is_alt_held = self.is_alt_held
+
     def set_color(self, x, color):
         self.trellis.color(x, 0, color)
 

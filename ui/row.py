@@ -22,6 +22,7 @@ class Row(object):
     # internal state
     mode = MODE.PLAY
     held_index = -1
+    is_alt_held = False
 
     # from chuck
     playback_mode = None
@@ -108,7 +109,10 @@ class Row(object):
 
         if self.mode == MODE.CONTROL_1 and edge == EDGE_RISING:
             if x == 0:
-                self.to_chuck("/recording", 0 if self.is_recording else 1)
+                if self.is_alt_held:
+                    self.to_chuck("/clear", 1)
+                else:
+                    self.to_chuck("/recording", 0 if self.is_recording else 1)
 
             if 1 <= x <= 7:
                 self.to_chuck("/rate", RATES[x - 1])

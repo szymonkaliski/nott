@@ -301,7 +301,7 @@ class OscListener {
 
         else if (msg.address.find("/clear") == 0) {
           msg.getInt(0) => int chan;
-          msg.getInt(0) => int status;
+          msg.getInt(1) => int status;
 
           <<< chan, "clear", status >>>;
 
