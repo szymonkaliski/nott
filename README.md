@@ -2,6 +2,8 @@
 
 Standalone [mlr](https://monome.org/docs/norns/dust/tehn/mlr/) & [norns](https://monome.org/norns/) inspired sampler, looper and granular instrument.
 
+<p align="center"><img src="assets/nott.jpg" /></p>
+
 ## Usage
 
 [Click here for detailed info.](./docs/USAGE.md)
