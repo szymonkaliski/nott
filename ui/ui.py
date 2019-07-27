@@ -1,13 +1,8 @@
-import busio
-import digitalio
 import liblo
 import signal
 import sys
 import time
 
-from adafruit_neotrellis.multitrellis import MultiTrellis
-from adafruit_neotrellis.neotrellis import NeoTrellis
-from board import SCL, SDA, D5
 from threading import Thread
 
 from consts import CHUCK_IN_PORT, CHUCK_OUT_PORT, CHUCK_HOST, LOOPS_COUNT
@@ -15,28 +10,15 @@ from row import Row
 from topbar import Topbar
 from patterns import Patterns
 
-# setup trellis
-i2c_bus = busio.I2C(SCL, SDA)
-trellis = MultiTrellis(
-    [
-        [
-            NeoTrellis(i2c_bus, True, addr=0x31),
-            NeoTrellis(i2c_bus, True, addr=0x30),
-            NeoTrellis(i2c_bus, True, addr=0x2F),
-            NeoTrellis(i2c_bus, True, addr=0x2E),
-        ],
-        [
-            NeoTrellis(i2c_bus, True, addr=0x35),
-            NeoTrellis(i2c_bus, True, addr=0x34),
-            NeoTrellis(i2c_bus, True, addr=0x33),
-            NeoTrellis(i2c_bus, True, addr=0x32),
-        ],
-    ]
-)
+from monome import Monome
 
 # setup chuck osc communication
 chuck_in = liblo.ServerThread(CHUCK_IN_PORT)
 chuck_out = liblo.Address(CHUCK_HOST, CHUCK_OUT_PORT)
+
+# setup monome
+monome = Monome()
+monome.start()
 
 # setup ui
 rows = []
@@ -47,25 +29,21 @@ patterns = Patterns(
 
 
 for i in range(LOOPS_COUNT):
-    row = Row(i, i + 1, trellis, chuck_in, patterns.on_msg)
+    row = Row(i, i + 1, monome, chuck_in, patterns.on_msg)
     rows.append(row)
     chuck_in.add_method("/status/" + str(row.id), "siiffffiff", row.on_osc_msg)
     chuck_in.add_method("/status_granular/" + str(row.id), "ffiii", row.on_osc_msg)
 
-topbar = Topbar(rows, patterns, trellis)
+topbar = Topbar(rows, patterns, monome)
 
 # start receiving info from chuck
 chuck_in.start()
-
-# interrupt pin - sync only when needed
-interrupt = digitalio.DigitalInOut(D5)
-interrupt.direction = digitalio.Direction.INPUT
 
 # main
 
 
 class Main(object):
-    is_running = True
+    is_running = False
     thread = None
 
     def __init__(self):
@@ -74,6 +52,7 @@ class Main(object):
 
     def start(self):
         self.thread.start()
+        self.is_running = True
 
     def stop(self):
         self.is_running = False
@@ -87,9 +66,6 @@ class Main(object):
 
                 for row in rows:
                     row.draw()
-
-                if interrupt.value is False:
-                    trellis.sync()
             else:
                 time.sleep(0.01)
 

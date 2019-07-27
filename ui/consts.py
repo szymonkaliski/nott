@@ -10,9 +10,9 @@ RATES = [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
 
 
 class COLOR(object):
-    OFF = (0, 0, 0)
-    WHITE_MUTED = (6, 4, 4)
-    WHITE = (60, 40, 40)
+    OFF = 0
+    WHITE_MUTED = 50
+    WHITE = 255
 
 
 class MODE(Enum):

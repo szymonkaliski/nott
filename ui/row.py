@@ -1,9 +1,5 @@
-from adafruit_neotrellis.neotrellis import NeoTrellis
-
 from consts import COLOR, MODE, PLAYBACK_MODES, RATES
-
-EDGE_RISING = NeoTrellis.EDGE_RISING
-EDGE_FALLING = NeoTrellis.EDGE_FALLING
+from monome import EDGE_RISING, EDGE_FALLING
 
 GRANULAR_SPANS = [1.0 / 128.0, 1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0]
 GRANULAR_LENGTHS = [1.0 / 128.0, 1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0]
@@ -12,7 +8,7 @@ GRANULAR_VOICES = [2, 4, 8, 16]
 
 class Row(object):
     # the world
-    trellis = None
+    monome = None
     chuck_out = None
 
     # id & row
@@ -44,10 +40,10 @@ class Row(object):
     granular_direction = 0
     granular_repitch = 0
 
-    def __init__(self, id, rowIdx, trellis, chuck_in, chuck_send_out):
+    def __init__(self, id, rowIdx, monome, chuck_in, chuck_send_out):
         self.id = id
         self.rowIdx = rowIdx
-        self.trellis = trellis
+        self.monome = monome
 
         self.chuck_in = chuck_in
         self.chuck_send_out = chuck_send_out
@@ -55,16 +51,14 @@ class Row(object):
         self.clear()
 
         for x in range(16):
-            self.trellis.activate_key(x, self.rowIdx, EDGE_RISING)
-            self.trellis.activate_key(x, self.rowIdx, EDGE_FALLING)
-            self.trellis.set_callback(x, self.rowIdx, self.on_click)
+            self.monome.set_callback(x, self.rowIdx, self.on_click)
 
     def clear(self):
         for x in range(16):
-            self.set_color(x, COLOR.OFF)
+            self.set_led(x, COLOR.OFF)
 
-    def set_color(self, x, color):
-        self.trellis.color(x, self.rowIdx, color)
+    def set_led(self, x, color):
+        self.monome.set_led(x, self.rowIdx, color)
 
     def to_chuck(self, path, *values):
         self.chuck_send_out(path, self.id, *values)
@@ -167,40 +161,40 @@ class Row(object):
 
             for i in range(0, 16):
                 if i == playback_pos_idx:
-                    self.set_color(
+                    self.set_led(
                         i, COLOR.WHITE if self.is_playing else COLOR.WHITE_MUTED
                     )
                 elif i == round(self.subloop[0] * 16) and is_sublooping:
-                    self.set_color(i, COLOR.WHITE_MUTED)
+                    self.set_led(i, COLOR.WHITE_MUTED)
                 elif i == round(self.subloop[1] * 16) and is_sublooping:
-                    self.set_color(i, COLOR.WHITE_MUTED)
+                    self.set_led(i, COLOR.WHITE_MUTED)
                 else:
-                    self.set_color(i, COLOR.OFF)
+                    self.set_led(i, COLOR.OFF)
 
         if self.mode == MODE.CONTROL_1:
-            self.set_color(0, COLOR.WHITE if self.is_recording else COLOR.WHITE_MUTED)
+            self.set_led(0, COLOR.WHITE if self.is_recording else COLOR.WHITE_MUTED)
 
             for idx, rate in enumerate(RATES):
                 if idx == 3:
-                    self.set_color(
+                    self.set_led(
                         4, COLOR.WHITE if rate == self.rate else COLOR.WHITE_MUTED
                     )
                 else:
-                    self.set_color(
+                    self.set_led(
                         idx + 1, COLOR.WHITE if rate == self.rate else COLOR.OFF
                     )
 
-            self.set_color(8, COLOR.WHITE if self.direction < 0 else COLOR.WHITE_MUTED)
-            self.set_color(9, COLOR.OFF)
+            self.set_led(8, COLOR.WHITE if self.direction < 0 else COLOR.WHITE_MUTED)
+            self.set_led(9, COLOR.OFF)
 
-            self.set_color(
+            self.set_led(
                 10,
                 COLOR.WHITE
                 if self.playback_mode == PLAYBACK_MODES.STANDARD
                 else COLOR.WHITE_MUTED,
             )
 
-            self.set_color(
+            self.set_led(
                 11,
                 COLOR.WHITE
                 if self.playback_mode == PLAYBACK_MODES.GRANULAR
@@ -208,25 +202,25 @@ class Row(object):
             )
 
             for i in range(12, 15):
-                self.set_color(i, COLOR.OFF)
+                self.set_led(i, COLOR.OFF)
 
-            self.set_color(15, COLOR.WHITE if self.is_playing else COLOR.WHITE_MUTED)
+            self.set_led(15, COLOR.WHITE if self.is_playing else COLOR.WHITE_MUTED)
 
         if self.mode == MODE.CONTROL_2:
             for i in range(0, 8):
-                self.set_color(
+                self.set_led(
                     i, COLOR.WHITE_MUTED if i / 8 <= self.volume else COLOR.OFF
                 )
 
             for i in range(8, 16):
-                self.set_color(
+                self.set_led(
                     i, COLOR.WHITE_MUTED if (i - 8) / 8 <= self.feedback else COLOR.OFF
                 )
 
         if self.mode == MODE.CONTROL_3:
             if self.playback_mode == PLAYBACK_MODES.GRANULAR:
                 for i in range(0, 4):
-                    self.set_color(
+                    self.set_led(
                         i,
                         COLOR.WHITE_MUTED
                         if GRANULAR_SPANS[i] == self.granular_span
@@ -234,7 +228,7 @@ class Row(object):
                     )
 
                 for i in range(4, 8):
-                    self.set_color(
+                    self.set_led(
                         i,
                         COLOR.WHITE_MUTED
                         if GRANULAR_LENGTHS[i - 4] == self.granular_length
@@ -242,26 +236,26 @@ class Row(object):
                     )
 
                 for i in range(8, 12):
-                    self.set_color(
+                    self.set_led(
                         i,
                         COLOR.WHITE_MUTED
                         if GRANULAR_VOICES[i - 8] == self.granular_voices
                         else COLOR.OFF,
                     )
 
-                self.set_color(
+                self.set_led(
                     12, COLOR.WHITE_MUTED if self.granular_direction == 1 else COLOR.OFF
                 )
-                self.set_color(
+                self.set_led(
                     13, COLOR.WHITE_MUTED if self.granular_direction == 2 else COLOR.OFF
                 )
-                self.set_color(
+                self.set_led(
                     14, COLOR.WHITE_MUTED if self.granular_direction == 3 else COLOR.OFF
                 )
-                self.set_color(
+                self.set_led(
                     15, COLOR.WHITE_MUTED if self.granular_repitch == 1 else COLOR.OFF
                 )
 
             else:
                 for i in range(0, 16):
-                    self.set_color(i, COLOR.OFF)
+                    self.set_led(i, COLOR.OFF)
