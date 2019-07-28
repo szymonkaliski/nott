@@ -1,4 +1,7 @@
+# FIXME: fix all "happy paths coding" issues
+
 import liblo
+from threading import Thread
 
 
 class Mext(object):
@@ -19,21 +22,35 @@ class Mext(object):
     def set_grid_key_callback(self, fn):
         self.grid_key_callback = fn
 
-    def set_led(self, x, y, value):
-        if self.device is None:
-            return
+    def set_led_level(self, x, y, value):
+        Thread(
+            target=(
+                lambda: liblo.send(
+                    self.device, "/monome/grid/led/level/set", x, y, value
+                )
+            )
+        ).start()
 
-        # FIXME: happy path coding...
-        liblo.send(self.device, "/monome/grid/led/level/set", x, y, value)
+    def set_led_map(self, offset_x, offset_y, values):
+        Thread(
+            target=(
+                lambda: liblo.send(
+                    self.device,
+                    "/monome/grid/led/level/map",
+                    offset_x,
+                    offset_y,
+                    *values
+                )
+            )
+        ).start()
 
     def on_grid_key(self, path, args):
         x, y, edge = args
-
-        print(x, y, edge)
 
         if self.grid_key_callback:
             self.grid_key_callback(x, y, edge)
 
     def on_serialosc_device(self, path, args):
         _, sysId, port = args
+
         self.device = liblo.Address(port)

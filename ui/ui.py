@@ -66,8 +66,8 @@ class Main(object):
 
                 for row in rows:
                     row.draw()
-            else:
-                time.sleep(0.01)
+
+            time.sleep(0.01)
 
 
 main = Main()
@@ -96,4 +96,4 @@ signal.signal(signal.SIGINT, signal_handler)
 # main loop
 
 while True:
-    time.sleep(1)
+    time.sleep(1000)

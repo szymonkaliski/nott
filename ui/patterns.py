@@ -15,7 +15,7 @@ class Patterns(object):
     def __init__(self, callback):
         self.callback = callback
 
-        self.thread = Thread(target=self.run_thread)
+        self.thread = Thread(target=self.run)
         self.thread.setDaemon(True)
         self.thread.start()
 
@@ -94,7 +94,7 @@ class Patterns(object):
 
         self.callback(path, loopId, *values)
 
-    def run_thread(self):
+    def run(self):
         while True:
             if self.is_replaying:
                 dt = time.time() - self.replay_start_time
