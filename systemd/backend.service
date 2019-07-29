@@ -1,14 +1,15 @@
 [Unit]
 Description=Nótt Backend
 After=multi-user.target
+StartLimitInterval=0
 
 [Service]
 User=pi
 WorkingDirectory=/home/pi/app/
 Type=idle
 ExecStart=/home/pi/.bin/chuck --adc3 --dac3 /home/pi/app/backend/backend.ck
-Restart=on-failure
-RestartSec=1s
+Restart=always
+RestartSec=2s
 
 [Install]
 WantedBy=multi-user.target
