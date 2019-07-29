@@ -2,12 +2,17 @@
 # TODO: add adapter for trellis.py
 # FIXME: fix all "happy paths coding" issues
 
-from mext import Mext
 from threading import Thread
 import time
 
 EDGE_RISING = 0
 EDGE_FALLING = 1
+
+
+class BACKEND(object):
+    MEXT = 1
+    MEXT_SERIAL = 2
+    # TRELLIS = 3
 
 
 class Monome(object):
@@ -17,17 +22,23 @@ class Monome(object):
     is_running = False
     thread = None
 
-    def __init__(self):
-        self.mext = Mext()
-        self.mext.set_grid_key_callback(self.handle_grid_key)
+    def __init__(self, backend=BACKEND.MEXT_SERIAL):
+        self.backend = backend
 
-        self.thread = Thread(target=self.run)
-        self.thread.setDaemon(True)
+        if self.backend == BACKEND.MEXT:
+            from mext import Mext
+
+            self.mext = Mext()
+            self.mext.set_grid_key_callback(self.handle_grid_key)
+
+        if self.backend == BACKEND.MEXT_SERIAL:
+            from mext_serial import MextSerial
+
+            self.mext_serial = MextSerial()
+            self.mext_serial.set_grid_key_callback(self.handle_grid_key)
 
     def handle_grid_key(self, x, y, edge):
         callback_id = "{}x{}".format(x, y)
-
-        print(callback_id)
 
         if self.callbacks[callback_id]:
             self.callbacks[callback_id](x, y, edge)
@@ -43,10 +54,17 @@ class Monome(object):
         self.callbacks[callback_id] = fn
 
     def update(self):
-        self.mext.set_led_map(0, 0, self.leds[0])
-        self.mext.set_led_map(8, 0, self.leds[1])
+        if self.backend == BACKEND.MEXT:
+            self.mext.set_led_map(0, 0, self.leds[0])
+            self.mext.set_led_map(8, 0, self.leds[1])
+
+        if self.backend == BACKEND.MEXT_SERIAL:
+            self.mext_serial.set_led_map(0, 0, self.leds[0])
+            self.mext_serial.set_led_map(8, 0, self.leds[1])
 
     def start(self):
+        self.thread = Thread(target=self.run)
+        self.thread.setDaemon(True)
         self.thread.start()
         self.is_running = True
 
@@ -56,6 +74,11 @@ class Monome(object):
     def run(self):
         while True:
             if self.is_running:
+                if self.backend == BACKEND.MEXT_SERIAL:
+                    self.mext_serial.update()
+
                 self.update()
 
-            time.sleep(0.15)
+                if self.backend == BACKEND.MEXT:
+                    time.sleep(0.2)
+
