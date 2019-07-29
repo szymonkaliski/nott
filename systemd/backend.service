@@ -7,6 +7,8 @@ User=pi
 WorkingDirectory=/home/pi/app/
 Type=idle
 ExecStart=/home/pi/.bin/chuck --adc3 --dac3 /home/pi/app/backend/backend.ck
+Restart=on-failure
+RestartSec=1s
 
 [Install]
 WantedBy=multi-user.target
