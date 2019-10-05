@@ -1,5 +1,6 @@
 from consts import COLOR, MODE, PLAYBACK_MODES, RATES
 from monome import EDGE_RISING, EDGE_FALLING
+from time import time
 
 GRANULAR_SPANS = [1.0 / 128.0, 1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0]
 GRANULAR_LENGTHS = [1.0 / 128.0, 1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0]
@@ -40,12 +41,11 @@ class Row(object):
     granular_direction = 0
     granular_repitch = 0
 
-    def __init__(self, id, rowIdx, monome, chuck_in, chuck_send_out):
+    def __init__(self, id, rowIdx, monome, chuck_send_out):
         self.id = id
         self.rowIdx = rowIdx
         self.monome = monome
 
-        self.chuck_in = chuck_in
         self.chuck_send_out = chuck_send_out
 
         self.clear()

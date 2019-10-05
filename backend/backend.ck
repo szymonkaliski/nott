@@ -5,7 +5,6 @@
 3000        => int PORT_IN;
 6           => int LOOPS_COUNT;
 8::second   => dur LOOP_DURATION;
-// 4::second   => dur LOOP_DURATION;
 0.01        => float EPS;
 
 "MODE_STANDARD" => string MODE_STANDARD;
@@ -233,13 +232,13 @@ class Loop {
 
 // main chucks
 
-Gain inputGain, passThrough;
-
+Gain inputGain;
 adc => inputGain;
-adc => passThrough => dac;
-
 1.0 => inputGain.gain;
-1.0 => passThrough.gain;
+
+// Gain passThrough;
+// adc => passThrough => dac;
+// 1.0 => passThrough.gain;
 
 Loop loop[LOOPS_COUNT];
 
@@ -413,7 +412,7 @@ class OscSender {
     oscOut.dest(host, port);
 
     while (true) {
-      0.01::second => now;
+      33::ms => now;
 
       for (0 => int i; i < LOOPS_COUNT; i++) {
         oscOut.start("/status/" + i);

@@ -1,12 +1,14 @@
 from serial import Serial
+from time import time
 
 
 class MextSerial(object):
     def __init__(self):
-        # TODO: get values from config
+        # TODO: set values from config
         self.serial = Serial(
             "/dev/ttyACM0",
-            500000,
+            115200,
+            # 500000,
             timeout=0,
             # write_timeout=0
         )
@@ -22,17 +24,24 @@ class MextSerial(object):
 
         self.serial.write(packed)
 
+    def set_led(self, x, y, value):
+        self.serial.write([0x18, x, y, value])
+
     def update(self):
-        r = self.serial.read(3)
+        if self.serial.in_waiting >= 3:
+            r = self.serial.read(3)
 
-        # only parsing grid buttons
+            if len(r) != 3:
+                print("error reading three bytes from monome", r)
+                return
 
-        if len(r) != 3:
-            return
+            if r[0] != 32 and r[0] != 33:
+                print("unrecognised first byte from monome", r[0])
+                return
 
-        edge = 0 if r[0] == 32 else 1
-        x = r[1]
-        y = r[2]
+            edge = 0 if r[0] == 32 else 1
+            x = r[1]
+            y = r[2]
 
-        if self.grid_key_callback:
-            self.grid_key_callback(x, y, edge)
+            if self.grid_key_callback:
+                self.grid_key_callback(x, y, edge)
