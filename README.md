@@ -4,6 +4,8 @@ Standalone [mlr](https://monome.org/docs/norns/dust/tehn/mlr/) & [norns](https:/
 
 <p align="center"><img src="assets/nott.jpg" /></p>
 
+**Warning**: instruction below is for a build from commit `da26d36081023a1721897fcc5c4f9a3c9ec9ea12` when NeoTrellis grid was soldered to Pisound. Since then I moved to having Pisound in the original case, and talking with monome through USB serial. If you want to follow this instruction, revert to the linked commit. If you want to use monome through USB serial, then ignore the soldering and GPIO parts.
+
 ## Usage
 
 [Click here for detailed info.](./docs/USAGE.md)
