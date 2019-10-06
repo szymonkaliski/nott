@@ -7,7 +7,7 @@ StartLimitInterval=0
 User=pi
 WorkingDirectory=/home/pi/app/
 Type=idle
-ExecStart=/home/pi/.bin/chuck --adc3 --dac3 /home/pi/app/backend/backend.ck
+ExecStart=/home/pi/.bin/chuck --adc4 --dac4 /home/pi/app/backend/backend.ck
 Restart=always
 RestartSec=2s
 
