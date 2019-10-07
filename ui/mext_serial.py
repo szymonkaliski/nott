@@ -1,17 +1,19 @@
 from serial import Serial
-from time import time
+import os.path
+
+
+def first(iterable, condition=lambda x: True):
+    return next(x for x in iterable if condition(x))
 
 
 class MextSerial(object):
     def __init__(self):
-        # TODO: set values from config
-        self.serial = Serial(
-            "/dev/ttyACM0",
-            115200,
-            # 500000,
-            timeout=0,
-            # write_timeout=0
+        serial_path = first(
+            ["/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2"],
+            condition=lambda path: os.path.exists(path),
         )
+
+        self.serial = Serial(serial_path, 115200, timeout=0)
 
     def set_grid_key_callback(self, fn):
         self.grid_key_callback = fn
@@ -33,10 +35,12 @@ class MextSerial(object):
 
             if len(r) != 3:
                 print("error reading three bytes from monome", r)
+
                 return
 
             if r[0] != 32 and r[0] != 33:
                 print("unrecognised first byte from monome", r[0])
+
                 return
 
             edge = 0 if r[0] == 32 else 1
