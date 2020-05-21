@@ -60,14 +60,10 @@ mkdir ~/temp && cd ~/temp
 
 git clone https://github.com/ccrma/chuck.git chuck-git
 
-# line 3788 replace `0` with `loop_start[0]` (https://github.com/ccrma/chuck/pull/115/files)
-# I should make a patch, but I'm too lazy :D
-vim chuck-git/src/core/ugen_xxx.cpp
-
 sudo apt-get install bison flex libasound2-dev libsndfile1-dev
 
 cd chuck-git/src/
-make linux-alasa
+make linux-alsa
 
 mkdir ~/.bin
 cp chuck ~/.bin/chuck
